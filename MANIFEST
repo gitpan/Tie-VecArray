@@ -1,0 +1,4 @@
+MANIFEST
+Makefile.PL
+lib/Tie/VecArray.pm
+t/VecArray.t
