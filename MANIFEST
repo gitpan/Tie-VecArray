@@ -1,4 +1,7 @@
-MANIFEST
-Makefile.PL
+Changes
 lib/Tie/VecArray.pm
+Makefile.PL
+MANIFEST
 t/VecArray.t
+META.yml                                 Module meta-data (added by MakeMaker)
+SIGNATURE                                Public-key signature (added by MakeMaker)

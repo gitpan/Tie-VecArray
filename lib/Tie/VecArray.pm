@@ -2,14 +2,31 @@ package Tie::VecArray;
 
 use strict;
 use vars qw($VERSION);
-$VERSION = '0.01';
+$VERSION = '0.03';
 
 use POSIX qw(ceil);
 
-# These are protected data members.
-use fields qw(bits vec size);
-
+use constant BITS => 0;
+use constant VEC  => 1;
+use constant SIZE => 2;
 use base qw(Tie::Array);
+
+# Let's not require Filter::cpp.
+BEGIN { eval 'use Filter::cpp' }
+sub _IDX2BYTES {
+    my Tie::VecArray $self = shift;
+    my $idx = shift;
+#define _IDX2BYTES($self, $idx) \
+    ceil($idx * ($self->[BITS]/8))
+}
+
+sub _BYTES2IDX {
+    my Tie::VecArray $self = shift;
+    my $bytes = shift;
+#define _BYES2IDX($self, $bytes) \
+    ceil($bytes * 8 / $self->[BITS])
+}
+
 
 =pod
 
@@ -59,6 +76,26 @@ bits which will be passed to C<vec()> to interpret the vector.
 If $vec is given that will be used as the bit vector, otherwise the
 vector will start out empty.
 
+=cut
+
+
+sub TIEARRAY {
+    my($class, $bits, $vec) = @_;
+
+    no strict 'refs';
+    my Tie::VecArray $self = bless [], $class;
+
+    $vec = '' unless defined $vec;
+
+    $self->[BITS] = $bits;
+    $self->[VEC]  = $vec;
+    $self->[SIZE] = _BYTES2IDX($self, length $vec);
+
+    return $self;
+}
+
+
+=pod
 
 =item B<bits>
 
@@ -95,89 +132,74 @@ Consider:
 
 =cut
 
+sub bits {
+    my Tie::VecArray $self = shift;
+    if(@_) {
+        my $bits = shift;
+        $self->[SIZE] = ceil($self->[SIZE] * $self->[BITS] / $bits);
+        $self->[BITS] = $bits;
+    }
+    return $self->[BITS];
+}
+
+
 #'#
-
-# Let's not require Filter::cpp.
-BEGIN { eval 'use Filter::cpp' }
-sub _IDX2BYTES {
-    my Tie::VecArray $self = shift;
-    my $idx = shift;
-#define _IDX2BYTES($self, $idx) \
-    ceil($idx * ($self->{bits}/8))
-}
-
-sub _BYTES2IDX {
-    my Tie::VecArray $self = shift;
-    my $bytes = shift;
-#define _BYES2IDX($self, $bytes) \
-    ceil($bytes * 8 / $self->{bits})
-}
-
-
-sub TIEARRAY {
-    my($class, $bits, $vec) = @_;
-
-    no strict 'refs';
-    my Tie::VecArray $self = bless [\%{$class.'::FIELDS'}], $class;
-
-    $vec = '' unless defined $vec;
-
-    $self->{bits} = $bits;
-    $self->{vec}  = $vec;
-    $self->{size} = _BYTES2IDX($self, length $vec);
-
-    return $self;
-}
 
 sub FETCH {
     my Tie::VecArray $self = shift;
-    return vec($self->{vec}, $_[0], $self->{bits});
+    return vec($self->[VEC], $_[0], $self->[BITS]);
 }
 
 sub STORE {
     my Tie::VecArray $self = shift;
-    $self->{size} = $_[0] + 1 if $self->{size} < $_[0] + 1;
-    return vec($self->{vec}, $_[0], $self->{bits}) = $_[1];
+    $self->[SIZE] = $_[0] + 1 if $self->[SIZE] < $_[0] + 1;
+    return vec($self->[VEC], $_[0], $self->[BITS]) = $_[1];
 }
 
 sub FETCHSIZE {
     my Tie::VecArray $self = shift;
-    return $self->{size};
+    return $self->[SIZE];
 }
 
 sub STORESIZE {
     my Tie::VecArray $self = shift;
     my $new_size = shift;
-    if( $self->{size} > $new_size ) {
+    if( $self->[SIZE] > $new_size ) {
         # clip the vector down to size.
         my $new_length = _IDX2BYTES($self, $new_size);
-        substr($self->{vec}, $new_length) = '' if 
-          $new_length < length $self->{vec};
+        substr($self->[VEC], $new_length) = '' if 
+          $new_length < length $self->[VEC];
     }
         
-    $self->{size} = $new_size;
+    $self->[SIZE] = $new_size;
 }
 
 sub CLEAR {
     my Tie::VecArray $self = shift;
-    $self->{vec}  = '';
-    $self->{size} = 0;
+    $self->[VEC]  = '';
+    $self->[SIZE] = 0;
 }
 
-sub bits {
-    my Tie::VecArray $self = shift;
-    if(@_) {
-        my $bits = shift;
-        $self->{size} = ceil($self->{size} * $self->{bits} / $bits);
-        $self->{bits} = $bits;
-    }
-    return $self->{bits};
-}
 
-    
+=back    
 
 =pod
 
+=head1 CAVEATS
+
+=over 4
+
+=item B<Its slow>
+
+Due to the sluggishness of perl's tie interface, this module is about
+8 times slower than using direct calls with C<vec()>.  Suck.  If you
+care alot about speed, don't use this module.  If you care about easy
+bit vector access or low memory usage, use this module.
+
+=item B<No multidimentional arrays>
+
+$vec_array[$i][$j] = $num; isn't going to work.  A future class will
+cover this possibility.
 
 =head1 AUTHOR
 

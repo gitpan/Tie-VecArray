@@ -1,17 +1,12 @@
-# A template for Makefile.PL used by Arena Networks.
-# - Set the $PACKAGE variable to the name of your module.
-# - Set $LAST_API_CHANGE to reflect the last version you changed the API 
-#   of your module.
-# - Fill in your dependencies in PREREQ_PM
-# Alternatively, you can say the hell with this and use h2xs.
+#!/usr/bin/perl
+
+BEGIN { require 5.006; }
 
 use ExtUtils::MakeMaker;
-# See lib/ExtUtils/MakeMaker.pm for details of how to influence
-# the contents of the Makefile that is written.
 
-$PACKAGE = 'Tie::VecArray';
-($PACKAGE_FILE) = $PACKAGE =~ /(?:\::)?([^:]+)$/;
-$LAST_API_CHANGE = 0;
+my $PACKAGE = 'Tie::VecArray';
+my($PACKAGE_FILE) = $PACKAGE =~ /(?:\::)?([^:]+)$/;
+my $LAST_API_CHANGE = 0;
 
 eval {
     eval "require $PACKAGE";
@@ -29,13 +24,11 @@ CHANGE_WARN
 
 WriteMakefile(
     NAME            => $PACKAGE,
-    VERSION_FROM    => "lib/Tie/VecArray.pm", # finds $VERSION
-    PREREQ_PM       => { POSIX          => 0,
-                         fields         => 0,
-                         base           => 0
-                       },
-    'dist'          => { COMPRESS   => 'gzip -9',
-                         SUFFIX     => '.gz',
-                         DIST_DEFAULT   => 'all tardist',
-                       },
+    VERSION_FROM    => "lib/Tie/VecArray.pm",
+    PREREQ_PM       => {
+        POSIX           => 0,
+        fields          => 0,
+        base            => 0,
+        'Test::More'    => 0.62,
+    },
 );
